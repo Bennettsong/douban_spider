@@ -33,10 +33,11 @@ class GetCookies:
         self.flag = 0
 
     def restart(self):
+        print('----------重启webDriver!----------')
         self.driver.quit()
+        time.sleep(random.randrange(3,6))
         self.driver = webdriver.Chrome(chrome_options=self.chrome_options)
         self.flag = 0
-        time.sleep(random.randrange(3,6))
 
     def login(self, name, password):
         maxTryTimes = 6
@@ -44,14 +45,18 @@ class GetCookies:
         while True:
             try:
                 if self.flag:
+                    wait1 = WebDriverWait(self.driver,10)
+                    inputs = wait1.until(EC.presence_of_element_located((By.CLASS_NAME,'nav-user-account')))
                     self.driver.find_element_by_class_name(
                         'nav-user-account').click()
                     self.driver.find_element_by_xpath(
                         '//*[@id="db-global-nav"]/div/div[1]/ul/li[2]/div/table/tbody/tr[5]/td/a').click()
-                    time.sleep(random.randrange(3,6))
+                    
                 else:
                     self.driver.get('https://www.douban.com/')
                     self.flag = 1
+                times = 0
+                time.sleep(random.randrange(3,6))
                 break
             except Exception:
                 print('---------Time Out,Retrying!----------')
@@ -59,22 +64,30 @@ class GetCookies:
                 times += 1
                 if times >= maxTryTimes:
                     return None
-        wait = WebDriverWait(self.driver,10)
-        try:
-            inputs = wait.until(EC.presence_of_element_located((By.TAG_NAME,'iframe')))
-            iframe = self.driver.find_element_by_tag_name("iframe")
-            self.driver.switch_to_frame(iframe)
-            self.driver.find_element_by_class_name('account-tab-account').click()
-            self.driver.find_element_by_id('username').send_keys(name)
-            self.driver.find_element_by_id('password').send_keys(password)
-            self.driver.find_element_by_class_name('btn-account').click()
-        except Exception:
-            return self.login(name, password)
+        while True:
+            try:
+                wait = WebDriverWait(self.driver,10)
+                inputs = wait.until(EC.presence_of_element_located((By.TAG_NAME,'iframe')))
+                iframe = self.driver.find_element_by_tag_name("iframe")
+                self.driver.switch_to_frame(iframe)
+                self.driver.find_element_by_class_name('account-tab-account').click()
+                self.driver.find_element_by_id('username').send_keys(name)
+                self.driver.find_element_by_id('password').send_keys(password)
+                self.driver.find_element_by_class_name('btn-account').click()
+                break
+            except Exception:
+                print('----------无法定位到用户名输入框---------')
+                times += 1
+                if times >= maxTryTimes:
+                    return None
+                time.sleep(random.randrange(3,6))
+                # return self.login(name, password)
         time.sleep(random.randrange(5,8))
         try:
             cookies_list = self.driver.get_cookies()
             cookies = {i["name"]: i["value"] for i in cookies_list}
         except Exception:
+            print('-----------登录成功，但是获取Cookie失败----------')
             return None
         flag = self.detection(cookies)
         if flag == 0:
